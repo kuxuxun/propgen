@@ -27,15 +27,13 @@ object PropGen{
       return
     }
 
-    unless(args.silent)( _ => println("Start generating ...."))
-
-    rm(new File(conf.destDirPath))
+    unless(args.silent)(  println("Start generating ...."))
 
     proc(EnviromentSetting.loadEnvSettings) { envSettings =>
       conf.srdDir.listFiles.foreach{ propFile =>
         if (propFile.isFile){
 
-          unless(args.silent)(_ => println("Converting [" + propFile.getName + "] ===================="))
+          unless(args.silent)(println("Converting [" + propFile.getName + "] ===================="))
 
           envSettings.foreach{ case eachEnv =>
              eachEnv.convAndOutput(propFile)
@@ -44,19 +42,18 @@ object PropGen{
       }
     }
 
-    unless(args.silent){ _ =>
+    unless(args.silent){
       println("Finished!!! ")
       println("Check => " + conf.destDirPath)
    }
 }
 
   def showUsage = {
-    var usage = "\nusage: java -jar propgen.jar [options]   \n"
-    usage += "Options:\n"
+    var usage = "\nusage: java [sysprop] -jar propgen.jar [options]   \n"
+    usage += "SysProp:\n"
     usage += " -D     システムプロパティーを変更します。\n"
     usage += "           [propgenのシステムプロパティ] \n"
     usage += "           destDir  出力ファイル格納ディレクトリ。デフォルトは./dest/\n"
-    usage += "                    *** 注意: destDirに指定されたディレクトリは実行時に一度削除されます。***\n"
     usage += "           srcDir   入力ファイル格納ディレクトリ。デフォルトは./org/\n"
     usage += "           settingFilePath     環境ごとの設定ファイルパス\n"
     usage += "                               デフォルトはsetting/env.xls\n"
@@ -64,6 +61,7 @@ object PropGen{
     usage += "                               デフォルトはシステムのエンコーディング\n"
     usage += "           inputfile.encoding  入力ファイルエンコーディング。\n"
     usage += "                               デフォルトはシステムのエンコーディング\n"
+    usage += "Options:\n"
     usage += " -s     実行結果を表示しません。\n"
     usage += " -h     このヘルプを表示します。\n"
     println(usage)
@@ -176,7 +174,7 @@ case class EnviromentSetting(name :String ,keyToValsForPropname :Map[String, Map
 
      val (key, orgValue) = keyToValTuple(line.split("=").map(_.trim))
      val value = keyToValsForPropname.get(propName).map(kv => kv.get(key)) .getOrElse(None) .getOrElse(orgValue)
-     if (value.isEmpty) line
+     if (value.length == 0) line
      else if (value == orgValue) line
      else """(^.*=[\t|\s]*).*""".r.replaceAllIn(line, m => m.group(1) + value )
   }
@@ -185,17 +183,21 @@ case class EnviromentSetting(name :String ,keyToValsForPropname :Map[String, Map
   def convAndOutput(orgPropFile:File)(implicit conf:Config, args:Args)  = {
 
       val destDir = genDirs(new File(formatDir(formatDir(conf.destDirPath) + this.name)))
-      val destFile = new PrintWriter(formatDir(destDir.getAbsolutePath) + orgPropFile.getName, conf.outputFileEncoding)
+      val destDirPath = formatDir(destDir.getAbsolutePath) + orgPropFile.getName
+
+      rm(new File(destDirPath))
+
+      val destFile = new PrintWriter(destDirPath, conf.outputFileEncoding)
       val propName = dropExtention(orgPropFile.getName)
 
-      unless(args.silent)(_ => println("  - [" + name +"]  "))
 
+      unless(args.silent)( println("  - [" + name +"]  "))
       using(destFile) { out =>
         val orgFile =  Source.fromInputStream(new FileInputStream(orgPropFile) )(conf.inputFileEncoding)
         using(orgFile){ in =>
           in.getLines.zipWithIndex.foreach{ case (line, ind) => {
             val newLine = this.convertIfKeyDefined (propName, line)
-            unless(args.silent){ _ =>
+            unless(args.silent){
               println("     " + ( ind + 1) +": "+ (if(newLine == line) "Keep  : " + line else "Change: "  + line + " -> " + newLine)) }
 
             out.println(newLine)
@@ -210,12 +212,12 @@ class Config() {
   val defaultProp = new Properties()
   defaultProp.load(getResource("genprop.properties"))
 
-  ( "destDir":: "srcDir" :: "settingFilePath" :: Nil ).foreach{  key =>
-    System.setProperty( key, defaultProp.getProperty(key))
+  ("destDir":: "srcDir" :: "settingFilePath" :: Nil ).foreach{  key =>
+    if(System.getProperty(key) == null) System.setProperty( key, defaultProp.getProperty(key))
   }
 
   ("outputfile.encoding" :: "inputfile.encoding" :: Nil).foreach{ key =>
-    System.setProperty( key, System.getProperty("file.encoding"))
+     if(System.getProperty(key) == null) System.setProperty( key, System.getProperty("file.encoding"))
   }
 
   def outputFileEncoding = sysprop("outputfile.encoding")
