@@ -7,7 +7,7 @@
   <groupId>com.github.kuxuxun</groupId>
   <artifactId>propgen</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <name>propgen</name>
 
   <properties>
@@ -52,6 +52,12 @@
       <artifactId>scalatest_2.9.1</artifactId>
       <version>1.7.1</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.0</version>
     </dependency>
 
     <dependency>

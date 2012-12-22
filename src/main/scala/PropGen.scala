@@ -7,11 +7,13 @@ import com.github.kuxuxun.scotch.excel.area.ScPos
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.{FileInputStream,File,InputStreamReader,PrintWriter}
+import java.nio.charset.Charset
 import java.util.Properties
 import scala.collection.immutable.HashMap
 import scala.io.Source
 import Proc._
 import WithFileSystem._
+import org.apache.commons.lang3.StringEscapeUtils._
 
 /**
  * エクセルで設定されたプロパティ値によって各環境用プロパティファイルを生成します。
@@ -57,10 +59,6 @@ object PropGen{
     usage += "           srcDir   入力ファイル格納ディレクトリ。デフォルトは./org/\n"
     usage += "           settingFilePath     環境ごとの設定ファイルパス\n"
     usage += "                               デフォルトはsetting/env.xls\n"
-    usage += "           outputfile.encoding 出力ファイルエンコーディング。\n"
-    usage += "                               デフォルトはシステムのエンコーディング\n"
-    usage += "           inputfile.encoding  入力ファイルエンコーディング。\n"
-    usage += "                               デフォルトはシステムのエンコーディング\n"
     usage += "Options:\n"
     usage += " -s     実行結果を表示しません。\n"
     usage += " -h     このヘルプを表示します。\n"
@@ -131,7 +129,6 @@ object EnviromentSetting{
       }
     }
 
-
   def apply(eachEnviromentHeader : (ScPos, String),
             propNameAndKeyAndRows : List[(String, String, Int)] ,
             sheet :ScSheet ) : EnviromentSetting= {
@@ -176,7 +173,7 @@ case class EnviromentSetting(name :String ,keyToValsForPropname :Map[String, Map
      val value = keyToValsForPropname.get(propName).map(kv => kv.get(key)) .getOrElse(None) .getOrElse(orgValue)
      if (value.length == 0) line
      else if (value == orgValue) line
-     else """(^.*=[\t|\s]*).*""".r.replaceAllIn(line, m => m.group(1) + value )
+     else """(^.*=[\t|\s]*).*""".r.replaceAllIn(line, m => m.group(1) + UnicodeConverter.unicodeEscape(value))
   }
 
   /** ファイルのプロパティ値の変換を行い、ファイルを出力します。*/
@@ -187,24 +184,24 @@ case class EnviromentSetting(name :String ,keyToValsForPropname :Map[String, Map
 
       rm(new File(destDirPath))
 
-      val destFile = new PrintWriter(destDirPath, conf.outputFileEncoding)
+      val destFile = new PrintWriter(destDirPath, "ISO8859_1")
       val propName = dropExtention(orgPropFile.getName)
-
 
       unless(args.silent)( println("  - [" + name +"]  "))
       using(destFile) { out =>
-        val orgFile =  Source.fromInputStream(new FileInputStream(orgPropFile) )(conf.inputFileEncoding)
+        val orgFile =  Source.fromInputStream(new FileInputStream(orgPropFile) )("ISO8859_1")
         using(orgFile){ in =>
           in.getLines.zipWithIndex.foreach{ case (line, ind) => {
             val newLine = this.convertIfKeyDefined (propName, line)
             unless(args.silent){
-              println("     " + ( ind + 1) +": "+ (if(newLine == line) "Keep  : " + line else "Change: "  + line + " -> " + newLine)) }
+              println("     " + ( ind + 1) +": "+ unescapeJava(if(newLine == line) "Keep  : " + line else "Change: "  + line + " -> " + newLine)) }
 
             out.println(newLine)
           }}
         }
       }
     }
+
 }
 
 class Config() {
@@ -216,12 +213,6 @@ class Config() {
     if(System.getProperty(key) == null) System.setProperty( key, defaultProp.getProperty(key))
   }
 
-  ("outputfile.encoding" :: "inputfile.encoding" :: Nil).foreach{ key =>
-     if(System.getProperty(key) == null) System.setProperty( key, System.getProperty("file.encoding"))
-  }
-
-  def outputFileEncoding = sysprop("outputfile.encoding")
-  def inputFileEncoding = sysprop("inputfile.encoding")
 
   def destDirPath : String = sysprop("destDir")
 
@@ -239,6 +230,32 @@ class Config() {
       file
     }
   }
-
 }
+
+object UnicodeConverter{
+  /**
+   * 文字列をユニコードエスケープします。
+   * <p>
+   * ISO8859_1でエンコードできない文字列をユニコードエスケープ(udddd形式)して返却します
+   * このメソッドが返却する文字列をファイルに書き込む事を想定しているため
+   * 先頭には２つのバックスラッシュが付加されます(そのまま書き込むとバックスラッシュが１つになります。
+   */
+  def unicodeEscape(s: String) : String = {
+    proc (Charset.forName("ISO8859_1").newEncoder){ asciiDetector =>
+      s.toCharArray.foldLeft(""){ (encoded, eachChar) =>
+        if(asciiDetector.canEncode(eachChar))
+          encoded + eachChar
+        else
+          encoded + "\\\\u" + escapeChar(eachChar)
+        }
+    }
+  }
+
+  /** convert\udddd style */
+  def escapeChar(c : Char) : String = {
+    // 先頭0埋めのため0x10000との論理和をとる
+    Integer.toHexString(0x10000 | c).substring(1).toUpperCase
+  }
+}
+
 

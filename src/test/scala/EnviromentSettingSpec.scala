@@ -5,6 +5,7 @@ import org.scalatest.matchers.ShouldMatchers
 import propgen.EnviromentSetting
 import com.github.kuxuxun.scotch.excel.area.ScPos
 import scala.collection.immutable.Map
+import org.apache.commons.lang3.StringEscapeUtils._
 
 @RunWith(classOf[JUnitRunner])
 class EnviromentSettingSpec extends FlatSpec with ShouldMatchers{
@@ -44,16 +45,16 @@ class EnviromentSettingSpec extends FlatSpec with ShouldMatchers{
   it should "convert value of properties key-value line" in {
 
     val convertMap =
-      Map("p1" -> Map("k1" -> "これはp1.k1の値です",
+      Map("p1" -> Map("k1" -> "this_is_value_for_p1.k1",
                       "k2" -> "val of k2 of p1" ,
                       "k3" -> "") ) ++
       Map("p2" -> Map("k1" -> "val of k1 of p2") )
 
   val settingForLocal = EnviromentSetting("local",convertMap)
 
-  settingForLocal.convertIfKeyDefined("p1","k1=aaaaa") should equal ("k1=これはp1.k1の値です")
+  settingForLocal.convertIfKeyDefined("p1","k1=aaaaa") should equal ("k1=this_is_value_for_p1.k1")
 
-  settingForLocal.convertIfKeyDefined("p1","k1  =  aaaaa") should equal ("k1  =  これはp1.k1の値です")
+  settingForLocal.convertIfKeyDefined("p1","k1  =  aaaaa") should equal ("k1  =  this_is_value_for_p1.k1")
 
   settingForLocal.convertIfKeyDefined("p1","k3=aaaaa") should equal ("k3=aaaaa")
   settingForLocal.convertIfKeyDefined("p1","strangekey=aaaaa") should equal ("strangekey=aaaaa")
