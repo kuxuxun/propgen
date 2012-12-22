@@ -12,4 +12,4 @@ propgen
     mvn assembly:assembly
 
 ## ヘルプ
-    java -jar propgen-0.0.2-jar-with-dependencies.jar -h
+    java -jar propgen-[version_no]-jar-with-dependencies.jar -h
