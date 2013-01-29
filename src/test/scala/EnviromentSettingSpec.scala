@@ -54,6 +54,9 @@ class EnviromentSettingSpec extends FlatSpec with ShouldMatchers{
 
   settingForLocal.convertIfKeyDefined("p1","k1=aaaaa") should equal ("k1=this_is_value_for_p1.k1")
 
+  settingForLocal.convertIfKeyDefined("p1","k1=hahaha=aa=aaa") should equal ("k1=this_is_value_for_p1.k1")
+  settingForLocal.convertIfKeyDefined("p1","k1 =  space=aa= ahaa ") should equal ("k1 =  this_is_value_for_p1.k1")
+  
   settingForLocal.convertIfKeyDefined("p1","k1  =  aaaaa") should equal ("k1  =  this_is_value_for_p1.k1")
 
   settingForLocal.convertIfKeyDefined("p1","k3=aaaaa") should equal ("k3=aaaaa")
@@ -62,6 +65,7 @@ class EnviromentSettingSpec extends FlatSpec with ShouldMatchers{
   settingForLocal.convertIfKeyDefined("p2","k1=aaaaa") should equal ("k1=val of k1 of p2")
 
   settingForLocal.convertIfKeyDefined("strangeprop","k1=aaaaa") should equal ("k1=aaaaa")
+
 
   }
 }

@@ -173,7 +173,7 @@ case class EnviromentSetting(name :String ,keyToValsForPropname :Map[String, Map
      val value = keyToValsForPropname.get(propName).map(kv => kv.get(key)) .getOrElse(None) .getOrElse(orgValue)
      if (value.length == 0) line
      else if (value == orgValue) line
-     else """(^.*=[\t|\s]*).*""".r.replaceAllIn(line, m => m.group(1) + UnicodeConverter.unicodeEscape(value))
+     else """(^.*?=[\t|\s]*).*""".r.replaceAllIn(line, m => m.group(1) + UnicodeConverter.unicodeEscape(value))
   }
 
   /** ファイルのプロパティ値の変換を行い、ファイルを出力します。*/
